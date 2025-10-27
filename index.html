@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UX to UI Slider</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1024px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .image-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0;
+            background-color: white;
+        }
+
+        .current-image {
+            max-width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .image-loading {
+            opacity: 0.3;
+            filter: blur(5px);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .slider-container {
+            padding: 20px;
+            background-color: white;
+        }
+
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .slider-label {
+            font-size: 16px;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .slider-input-wrapper {
+            flex: 1;
+            padding: 0 10px;
+        }
+
+        .slider-input {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: linear-gradient(to right, #4CAF50 0%, #FFC107 50%, #FF5722 100%);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3px solid #333;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .slider-input::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        .slider-input::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3px solid #333;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-gif {
+            width: 400px;
+            height: 400px;
+            object-fit: contain;
+        }
+
+        .progress-bar-container {
+            width: 800px;
+            max-width: 90%;
+            margin-top: 40px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .slider-wrapper {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .slider-input-wrapper {
+                width: 100%;
+            }
+
+            .current-image {
+                max-height: 400px;
+            }
+
+            .loading-gif {
+                width: 300px;
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <img src="Assets/Loading Animation.gif" alt="Loading" class="loading-gif">
+        <div class="progress-bar-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="app-container" style="display: none;">
+        <div class="image-container">
+            <img id="current-image" src="" alt="UX/UI Transition" class="current-image">
+        </div>
+
+        <div class="slider-container">
+            <div class="slider-wrapper">
+                <div class="slider-label">UX</div>
+                <div class="slider-input-wrapper">
+                    <input type="range" id="slider" class="slider-input" min="0" max="6" value="0" step="1">
+                </div>
+                <div class="slider-label">UI</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Asset paths
+        const assets = [
+            'Assets/1.png',
+            'Assets/2.png',
+            'Assets/3.png',
+            'Assets/4.png',
+            'Assets/5.gif',
+            'Assets/6.gif',
+            'Assets/7.gif'
+        ];
+
+        let currentIndex = 0;
+        const slider = document.getElementById('slider');
+        const currentImage = document.getElementById('current-image');
+        const loadingScreen = document.getElementById('loading-screen');
+        const app = document.getElementById('app');
+        const progressFill = document.getElementById('progress-fill');
+
+        // Preload images
+        function preloadAssets() {
+            return Promise.all(assets.map(src => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = src;
+                    img.onload = resolve;
+                    img.onerror = resolve; // Continue even if image fails
+                });
+            }));
+        }
+
+        // Simulate loading progress
+        let progress = 0;
+        const loadingInterval = setInterval(() => {
+            progress += 1;
+            progressFill.style.width = progress + '%';
+            if (progress >= 100) {
+                clearInterval(loadingInterval);
+            }
+        }, 50);
+
+        // After assets are loaded, show the app
+        preloadAssets().then(() => {
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                app.style.display = 'flex';
+                // Set initial image
+                currentImage.src = assets[0];
+            }, 3000);
+        });
+
+        // Preload and track loading state
+        const preloadedImages = {};
+        
+        // Preload all images when assets are ready
+        assets.forEach((src, index) => {
+            const img = new Image();
+            img.src = src;
+            preloadedImages[index] = img;
+        });
+
+        // Track if this is first load for each GIF
+        const firstLoadTracker = {};
+        
+        // Update image when slider changes
+        slider.addEventListener('input', (e) => {
+            currentIndex = parseInt(e.target.value);
+            const newSrc = assets[currentIndex];
+            
+            // Check if image is loaded in cache
+            if (preloadedImages[currentIndex].complete) {
+                // Image is already loaded, show it immediately
+                if (newSrc.endsWith('.gif') && !firstLoadTracker[currentIndex]) {
+                    // First time loading this GIF - add timestamp to restart animation
+                    currentImage.src = newSrc + '?t=' + Date.now();
+                    firstLoadTracker[currentIndex] = true;
+                } else {
+                    // Subsequent loads - use cached version
+                    currentImage.src = newSrc;
+                }
+            } else {
+                // Show loading state
+                currentImage.classList.add('image-loading');
+                
+                // Wait for image to load
+                preloadedImages[currentIndex].onload = () => {
+                    currentImage.classList.remove('image-loading');
+                    if (newSrc.endsWith('.gif') && !firstLoadTracker[currentIndex]) {
+                        // First time loading this GIF
+                        currentImage.src = newSrc + '?t=' + Date.now();
+                        firstLoadTracker[currentIndex] = true;
+                    } else {
+                        // Subsequent loads
+                        currentImage.src = newSrc;
+                    }
+                };
+                
+                currentImage.src = newSrc;
+            }
+        });
+    </script>
+</body>
+</html>
