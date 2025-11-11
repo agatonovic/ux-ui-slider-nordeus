@@ -183,6 +183,7 @@
     const progressFill = document.getElementById('progress-fill');
 
     const preloaded = [];
+    let loadedCount = 0;
 
     function preloadAll() {
         return Promise.all(assets.map((src, index) => {
@@ -190,42 +191,37 @@
                 fetch(src)
                     .then(res => res.blob())
                     .then(blob => {
-                        // Create blob URL
                         preloaded[index] = {
                             blob: blob,
                             url: URL.createObjectURL(blob),
                             isGif: src.endsWith('.gif')
                         };
-                        resolve();
                     })
-                    .catch(() => resolve());
+                    .finally(() => {
+                        loadedCount++;
+                        const percent = Math.round((loadedCount / assets.length) * 100);
+                        progressFill.style.width = percent + '%';
+                        resolve();
+                    });
             });
         }));
     }
 
-    // Fake progress bar
-    let progress = 0;
-    const loadingInterval = setInterval(() => {
-        progress++;
-        progressFill.style.width = progress + '%';
-        if (progress >= 100) clearInterval(loadingInterval);
-    }, 50);
-
     preloadAll().then(() => {
+        // Small delay for smoothness
         setTimeout(() => {
             loadingScreen.style.display = 'none';
             app.style.display = 'flex';
             currentImage.src = preloaded[0].url;
-        }, 3000);
+        }, 500);
     });
 
     slider.addEventListener('input', (e) => {
         const index = parseInt(e.target.value);
-
         const asset = preloaded[index];
 
         if (asset.isGif) {
-            // Force restart by regenerating blob URL
+            // Restart GIF instantly
             const url = URL.createObjectURL(asset.blob);
             currentImage.src = "";
             requestAnimationFrame(() => {
@@ -236,6 +232,5 @@
         }
     });
 </script>
-
 </body>
 </html>
