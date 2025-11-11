@@ -165,62 +165,77 @@
     </div>
 
     <script>
-        const assets = [
-            'Assets/1.png',
-            'Assets/2.png',
-            'Assets/3.png',
-            'Assets/4.png',
-            'Assets/5.gif',
-            'Assets/6.gif',
-            'Assets/7.gif',
-            'Assets/8.gif'
-        ];
+    const assets = [
+        'Assets/1.png',
+        'Assets/2.png',
+        'Assets/3.png',
+        'Assets/4.png',
+        'Assets/5.gif',
+        'Assets/6.gif',
+        'Assets/7.gif',
+        'Assets/8.gif'
+    ];
 
-        const slider = document.getElementById('slider');
-        const currentImage = document.getElementById('current-image');
-        const loadingScreen = document.getElementById('loading-screen');
-        const app = document.getElementById('app');
-        const progressFill = document.getElementById('progress-fill');
+    const slider = document.getElementById('slider');
+    const currentImage = document.getElementById('current-image');
+    const loadingScreen = document.getElementById('loading-screen');
+    const app = document.getElementById('app');
+    const progressFill = document.getElementById('progress-fill');
 
-        // Preload all assets
-        function preloadAssets() {
-            return Promise.all(assets.map(src => new Promise(resolve => {
-                const img = new Image();
-                img.onload = resolve;
-                img.onerror = resolve;
-                img.src = src;
-            })));
+    const preloaded = [];
+
+    function preloadAll() {
+        return Promise.all(assets.map((src, index) => {
+            return new Promise(resolve => {
+                fetch(src)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        // Create blob URL
+                        preloaded[index] = {
+                            blob: blob,
+                            url: URL.createObjectURL(blob),
+                            isGif: src.endsWith('.gif')
+                        };
+                        resolve();
+                    })
+                    .catch(() => resolve());
+            });
+        }));
+    }
+
+    // Fake progress bar
+    let progress = 0;
+    const loadingInterval = setInterval(() => {
+        progress++;
+        progressFill.style.width = progress + '%';
+        if (progress >= 100) clearInterval(loadingInterval);
+    }, 50);
+
+    preloadAll().then(() => {
+        setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            app.style.display = 'flex';
+            currentImage.src = preloaded[0].url;
+        }, 3000);
+    });
+
+    slider.addEventListener('input', (e) => {
+        const index = parseInt(e.target.value);
+
+        const asset = preloaded[index];
+
+        if (asset.isGif) {
+            // Force restart by regenerating blob URL
+            const url = URL.createObjectURL(asset.blob);
+            currentImage.src = "";
+            requestAnimationFrame(() => {
+                currentImage.src = url;
+            });
+        } else {
+            currentImage.src = asset.url;
         }
+    });
+</script>
 
-        // Fake progress bar
-        let progress = 0;
-        const loadingInterval = setInterval(() => {
-            progress++;
-            progressFill.style.width = progress + '%';
-            if (progress >= 100) clearInterval(loadingInterval);
-        }, 50);
-
-        preloadAssets().then(() => {
-            setTimeout(() => {
-                loadingScreen.style.display = 'none';
-                app.style.display = 'flex';
-                currentImage.src = assets[0];
-            }, 3000);
-        });
-
-        // Smooth GIF switching - always refresh with timestamp
-        slider.addEventListener('input', (e) => {
-            const index = parseInt(e.target.value);
-            const newSrc = assets[index];
-
-            currentImage.src = ""; // Force repaint
-
-            if (newSrc.endsWith('.gif')) {
-                currentImage.src = newSrc + "?t=" + Date.now();
-            } else {
-                currentImage.src = newSrc;
-            }
-        });
-    </script>
 </body>
 </html>
