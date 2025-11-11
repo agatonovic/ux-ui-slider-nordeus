@@ -13,6 +13,7 @@ ASSETS = [
     ASSETS_DIR / "5.gif",
     ASSETS_DIR / "6.gif",
     ASSETS_DIR / "7.gif",
+    ASSETS_DIR / "8.gif",
 ]
 
 # Preloaded assets dictionary
@@ -117,9 +118,9 @@ def main(page: ft.Page):
                     ft.Container(
                         content=ft.Slider(
                             min=0,
-                            max=6,
+                            max=7,
                             value=0,
-                            divisions=6,
+                            divisions=7,
                             label="{value}",
                             on_change=on_slider_change,
                         ),
